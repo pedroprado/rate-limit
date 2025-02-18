@@ -15,13 +15,13 @@ func TestNewNotificationChannels(t *testing.T) {
 		newsChan := make(chan Notification)
 		marketingChan := make(chan Notification)
 
-		expected := NotificationsChannels{
+		expected := NotificationsChannelsMap{
 			values.NotificationTypeStatus:    statusChan,
 			values.NotificationTypeNews:      newsChan,
 			values.NotificationTypeMarketing: marketingChan,
 		}
 
-		received, err := NewNotificationsChannels(statusChan, newsChan, marketingChan)
+		received, err := NewNotificationsChannelsMap(statusChan, newsChan, marketingChan)
 
 		assert.Nil(t, err)
 		assert.Equal(t, expected, received)
@@ -31,7 +31,7 @@ func TestNewNotificationChannels(t *testing.T) {
 		statusChan := make(chan Notification)
 		marketingChan := make(chan Notification)
 
-		received, err := NewNotificationsChannels(statusChan, nil, marketingChan)
+		received, err := NewNotificationsChannelsMap(statusChan, nil, marketingChan)
 
 		assert.ErrorContains(t, err, "should have all types of notification channels")
 		assert.Nil(t, received)
@@ -41,7 +41,7 @@ func TestNewNotificationChannels(t *testing.T) {
 		statusChan := make(chan Notification)
 		newsChan := make(chan Notification)
 
-		received, err := NewNotificationsChannels(statusChan, newsChan, nil)
+		received, err := NewNotificationsChannelsMap(statusChan, newsChan, nil)
 
 		assert.ErrorContains(t, err, "should have all types of notification channels")
 		assert.Nil(t, received)
@@ -51,7 +51,7 @@ func TestNewNotificationChannels(t *testing.T) {
 		newsChan := make(chan Notification)
 		marketingChan := make(chan Notification)
 
-		received, err := NewNotificationsChannels(nil, newsChan, marketingChan)
+		received, err := NewNotificationsChannelsMap(nil, newsChan, marketingChan)
 
 		assert.ErrorContains(t, err, "should have all types of notification channels")
 		assert.Nil(t, received)

@@ -17,9 +17,9 @@ func TestSendForRecipient(t *testing.T) {
 	notificationFrequency := 1
 	emailSender := &mocks.EmailSender{}
 
-	starter := NewNotificationChannelStarter(notificationFrequency, emailSender)
+	starter := NewNotificationChannelStarter(notificationFrequency, string(values.NotificationTypeMarketing), emailSender)
 
-	notificationForRecipientChan := make(chan entity.Notification, 3)
+	notificationChannelForRecipient := make(chan entity.Notification, 3)
 	notifications := []entity.Notification{
 		{
 			Type:    values.NotificationTypeStatus,
@@ -37,15 +37,15 @@ func TestSendForRecipient(t *testing.T) {
 		},
 	}
 	for i := 0; i < 3; i++ {
-		notificationForRecipientChan <- notifications[i]
+		notificationChannelForRecipient <- notifications[i]
 	}
-	close(notificationForRecipientChan)
+	close(notificationChannelForRecipient)
 
-	emailSender.On("Send", ctx, notifications[0].Content, notifications[0].Email).Return()
-	emailSender.On("Send", ctx, notifications[1].Content, notifications[1].Email).Return()
-	emailSender.On("Send", ctx, notifications[2].Content, notifications[2].Email).Return()
+	emailSender.On("Send", ctx, notifications[0]).Return()
+	emailSender.On("Send", ctx, notifications[1]).Return()
+	emailSender.On("Send", ctx, notifications[2]).Return()
 
-	starter.StartForRecipient(ctx, "email", notificationForRecipientChan)
+	starter.StartForRecipient(ctx, "email", notificationChannelForRecipient)
 
 	mock.AssertExpectationsForObjects(t, emailSender)
 }

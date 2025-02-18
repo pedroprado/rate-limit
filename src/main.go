@@ -3,10 +3,9 @@ package main
 import (
 	"context"
 	"log"
-	"sync"
-	"time"
+	"os"
+	"strconv"
 
-	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
 	"notification-service/src/core/domain/entity"
@@ -14,63 +13,89 @@ import (
 	emailsender "notification-service/src/core/useCases/emailSender"
 	notificationservice "notification-service/src/core/useCases/notification"
 	"notification-service/src/core/useCases/notification/processor"
+	"notification-service/src/infra"
+	"notification-service/src/presentation"
+	notificationsapi "notification-service/src/presentation/notificationsApi"
+	"notification-service/src/repository"
 )
 
 var (
+	basePath   = "/notification-service"
+	serverPort = "8182"
+
 	notificationsChan = make(chan entity.Notification)
 	statusChan        = make(chan entity.Notification)
 	newsChan          = make(chan entity.Notification)
 	marketingChan     = make(chan entity.Notification)
 
-	// statusNotificationFrequency    = 30
-	// newsNotificationFrequency      = 86400
-	// marketingNotificationFrequency = 1200
+	statusNotificationFrequencySeconds    = os.Getenv("STATUS_NOTIFICATION_FREQUENCY_SECONDS")
+	newsNotificationFrequencySeconds      = os.Getenv("NEWS_NOTIFICATION_FREQUENCY_SECONDS")
+	marketingNotificationFrequencySeconds = os.Getenv("MARKETING_NOTIFICATION_FREQUENCY_SECONDS")
 
-	statusNotificationFrequency    = 10
-	newsNotificationFrequency      = 11
-	marketingNotificationFrequency = 12
-
-	createChannel = func() chan entity.Notification {
-		return make(chan entity.Notification, 2)
+	createChannelForRecipient = func() chan entity.Notification {
+		return make(chan entity.Notification, 1)
 	}
 
-	ctx = context.Background()
+	ctx              = context.Background()
+	notificationRepo = repository.NewNotificationRepository()
 )
 
+// @BasePath /notification-service
 func main() {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	notifications := generateSampleNotifications()
-
-	go func() {
-		for _, notification := range notifications {
-			time.Sleep(time.Second)
-			notificationsChan <- notification
-		}
-		// close(notificationsChan)
-	}()
-
 	startNotificationProcessors()
 
-	notificationChannels, err := entity.NewNotificationsChannels(statusChan, newsChan, marketingChan)
+	notificationChannelsMap, err := entity.NewNotificationsChannelsMap(statusChan, newsChan, marketingChan)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	notificationsService := notificationservice.NewNotificationService(notificationsChan, notificationChannels)
-	go func() {
-		notificationsService.ProcessNotifications(ctx)
-		// wg.Done()
-	}()
+	notificationsService := notificationservice.NewNotificationsService(notificationRepo, notificationsChan, notificationChannelsMap)
 
 	logrus.Infof("Server up. Receiving notifications")
-	wg.Wait()
+
+	server := presentation.NewServerHttpGin(true)
+	routerGroup := server.GetGinRouterGroup(basePath)
+	presentation.RegisterInfraApi(routerGroup, false)
+	notificationsapi.RegisterNotificationsApi(routerGroup, notificationsService)
+
+	server.StartServer(ctx, serverPort)
 }
 
 func startNotificationProcessors() {
-	emailSender := emailsender.NewEmailSender()
-	statusProcessor := processor.NewNotificationProcessor(statusChan, processor.NewNotificationChannelStarter(statusNotificationFrequency, emailSender), createChannel)
-	newsProcessor := processor.NewNotificationProcessor(newsChan, processor.NewNotificationChannelStarter(newsNotificationFrequency, emailSender), createChannel)
-	marketingProcessor := processor.NewNotificationProcessor(marketingChan, processor.NewNotificationChannelStarter(marketingNotificationFrequency, emailSender), createChannel)
+	statusNotificationFrequency, err := strconv.Atoi(statusNotificationFrequencySeconds)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	newsNotificationFrequency, err := strconv.Atoi(newsNotificationFrequencySeconds)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	marketingNotificationFrequency, err := strconv.Atoi(marketingNotificationFrequencySeconds)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	emailSender := emailsender.NewEmailSender(infra.NewSmtpService(), notificationRepo)
+	statusProcessor := processor.NewNotificationProcessor(
+		notificationRepo,
+		statusChan,
+		processor.NewNotificationChannelStarter(statusNotificationFrequency, string(values.NotificationTypeStatus), emailSender),
+		createChannelForRecipient,
+		entity.NewRecipientsChannel(),
+	)
+	newsProcessor := processor.NewNotificationProcessor(
+		notificationRepo,
+		newsChan,
+		processor.NewNotificationChannelStarter(newsNotificationFrequency, string(values.NotificationTypeNews), emailSender),
+		createChannelForRecipient,
+		entity.NewRecipientsChannel(),
+	)
+	marketingProcessor := processor.NewNotificationProcessor(
+		notificationRepo,
+		marketingChan,
+		processor.NewNotificationChannelStarter(marketingNotificationFrequency, string(values.NotificationTypeMarketing), emailSender),
+		createChannelForRecipient,
+		entity.NewRecipientsChannel(),
+	)
 
 	go func() {
 		statusProcessor.Process(ctx)
@@ -81,39 +106,4 @@ func startNotificationProcessors() {
 	go func() {
 		marketingProcessor.Process(ctx)
 	}()
-}
-
-func generateSampleNotifications() []entity.Notification {
-	statusNotifications := make([]entity.Notification, 100)
-	for i := 0; i < 100; i++ {
-		statusNotifications[i] = entity.Notification{
-			Type:    values.NotificationTypeStatus,
-			Content: "Some status content " + uuid.NewString(),
-			Email:   "status@mail.com",
-		}
-	}
-	newsNotifications := make([]entity.Notification, 10)
-	for i := 0; i < 10; i++ {
-		newsNotifications[i] = entity.Notification{
-			Type:    values.NotificationTypeNews,
-			Content: "Some news content " + uuid.NewString(),
-			Email:   "news@mail.com",
-		}
-	}
-	marketingNotifications := make([]entity.Notification, 50)
-	for i := 0; i < 50; i++ {
-		marketingNotifications[i] = entity.Notification{
-			Type:    values.NotificationTypeMarketing,
-			Content: "Some marketing content " + uuid.NewString(),
-			Email:   "marketing@mail.com",
-		}
-	}
-
-	notifications := []entity.Notification{}
-	notifications = append(notifications, statusNotifications...)
-	notifications = append(notifications, newsNotifications...)
-	notifications = append(notifications, marketingNotifications...)
-
-	return notifications
-
 }

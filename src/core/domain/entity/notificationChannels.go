@@ -6,18 +6,18 @@ import (
 	"notification-service/src/core/domain/values"
 )
 
-type NotificationsChannels map[values.NotificationType]chan Notification
+type NotificationsChannelsMap map[values.NotificationType]chan Notification
 
-func NewNotificationsChannels(
+func NewNotificationsChannelsMap(
 	statusChan chan Notification,
 	newsChan chan Notification,
 	marketingChan chan Notification,
-) (NotificationsChannels, error) {
+) (NotificationsChannelsMap, error) {
 	if statusChan == nil || newsChan == nil || marketingChan == nil {
 		return nil, errors.New("should have all types of notification channels")
 	}
 
-	return NotificationsChannels{
+	return NotificationsChannelsMap{
 		values.NotificationTypeStatus:    statusChan,
 		values.NotificationTypeNews:      newsChan,
 		values.NotificationTypeMarketing: marketingChan,

@@ -4,6 +4,7 @@ package mocks
 
 import (
 	context "context"
+	entity "notification-service/src/core/domain/entity"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -13,9 +14,9 @@ type EmailSender struct {
 	mock.Mock
 }
 
-// Send provides a mock function with given fields: ctx, content, email
-func (_m *EmailSender) Send(ctx context.Context, content string, email string) {
-	_m.Called(ctx, content, email)
+// Send provides a mock function with given fields: ctx, notification
+func (_m *EmailSender) Send(ctx context.Context, notification entity.Notification) {
+	_m.Called(ctx, notification)
 }
 
 // NewEmailSender creates a new instance of EmailSender. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

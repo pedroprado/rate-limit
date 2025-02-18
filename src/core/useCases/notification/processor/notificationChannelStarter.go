@@ -12,15 +12,18 @@ import (
 
 type notificationSender struct {
 	notificationFrequency int
+	notificationType      string
 	emailSender           interfaces.EmailSender
 }
 
 func NewNotificationChannelStarter(
 	notificationFrequency int,
+	notificationType string,
 	emailSender interfaces.EmailSender,
 ) interfaces.NotificationChannelStarter {
 	return &notificationSender{
 		notificationFrequency: notificationFrequency,
+		notificationType:      notificationType,
 		emailSender:           emailSender,
 	}
 }
@@ -28,13 +31,13 @@ func NewNotificationChannelStarter(
 func (n *notificationSender) StartForRecipient(
 	ctx context.Context,
 	emailRecipient string,
-	notificationForRecipientChan chan entity.Notification,
+	notificationChannelForRecipient chan entity.Notification,
 ) {
-	logrus.WithContext(ctx).Infof("[NotificationProcessor] starting notification channel for recipient: %s", emailRecipient)
+	logrus.WithContext(ctx).Infof("[NotificationProcessor] starting notification %s channel for recipient: %s", n.notificationType, emailRecipient)
 	ticker := time.Tick(time.Second * time.Duration(n.notificationFrequency))
 
-	for notificationForRecipient := range notificationForRecipientChan {
+	for notificationForRecipient := range notificationChannelForRecipient {
 		<-ticker
-		n.emailSender.Send(ctx, notificationForRecipient.Content, notificationForRecipient.Email)
+		n.emailSender.Send(ctx, notificationForRecipient)
 	}
 }

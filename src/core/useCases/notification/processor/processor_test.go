@@ -15,78 +15,136 @@ import (
 )
 
 var (
-	newChannel    = make(chan entity.Notification, 2)
-	createChannel = func() chan entity.Notification {
-		return newChannel
+	newChannelForRecipient    = make(chan entity.Notification, 1)
+	createChannelForRecipient = func() chan entity.Notification {
+		return newChannelForRecipient
 	}
 )
 
 func TestProcess(t *testing.T) {
-	t.Run("should send to recipient channel when it already exists", func(t *testing.T) {
-		ctx := context.TODO()
+	ctx := context.TODO()
 
-		emailRecipient := uuid.NewString()
-		notificationChan := make(chan entity.Notification, 10)
-		for i := 0; i < 10; i++ {
-			notificationChan <- entity.Notification{
-				Type:    values.NotificationTypeStatus,
-				Content: uuid.NewString(),
-				Email:   emailRecipient,
-			}
+	t.Run("should send to existing recipient channel, rejecting when exceed channel capacity", func(t *testing.T) {
+		notificationRepo := &mocks.NotificationRepository{}
+		notificationChannelStarter := &mocks.NotificationChannelStarter{}
+
+		emailRecipient := uuid.NewString() + "@mail.com"
+		notifications := []entity.Notification{
+			{
+				NotificationID: uuid.New(),
+				Type:           values.NotificationTypeStatus,
+				Content:        uuid.NewString(),
+				Email:          emailRecipient,
+			},
+			{
+				NotificationID: uuid.New(),
+				Type:           values.NotificationTypeStatus,
+				Content:        uuid.NewString(),
+				Email:          emailRecipient,
+			},
+			{
+				NotificationID: uuid.New(),
+				Type:           values.NotificationTypeStatus,
+				Content:        uuid.NewString(),
+				Email:          emailRecipient,
+			},
+			{
+				NotificationID: uuid.New(),
+				Type:           values.NotificationTypeStatus,
+				Content:        uuid.NewString(),
+				Email:          emailRecipient,
+			},
+		}
+		notificationChan := make(chan entity.Notification, 4)
+
+		for _, notification := range notifications {
+			notificationChan <- notification
 		}
 		close(notificationChan)
+		recipientsChannels := entity.NewRecipientsChannel()
+		recipientsChannels.Channels[emailRecipient] = make(chan entity.Notification, 1)
 
-		notificationChannelStarter := &mocks.NotificationChannelStarter{}
-		existingChannel := make(chan entity.Notification, 2)
-		recipientsChannel[emailRecipient] = existingChannel
+		processor := NewNotificationProcessor(notificationRepo, notificationChan, notificationChannelStarter, createChannelForRecipient, recipientsChannels)
 
-		notificationChannelStarter.On("StartForRecipient", ctx, emailRecipient, existingChannel).Return().Times(2)
+		for i := 1; i < 4; i++ {
+			notificationRejected := notifications[i]
+			notificationRejected.Status = "REJECTED"
+			notificationRepo.On("Save", ctx, notificationRejected).Return(nil, nil)
+		}
 
-		processor := NewNotificationProcessor(notificationChan, notificationChannelStarter, createChannel)
-		time.Sleep(time.Second)
-
-		processor.Process(ctx)
+		go processor.Process(ctx)
+		time.Sleep(time.Second * 1)
 
 		notificationChannelStarter.AssertNumberOfCalls(t, "StartForRecipient", 0)
+		mock.AssertExpectationsForObjects(t, notificationRepo)
 	})
 
-	t.Run("should start new recipient channel when it does not exist", func(t *testing.T) {
-		ctx := context.TODO()
-
-		emailRecipient := uuid.NewString()
-		notificationChan := make(chan entity.Notification, 10)
-		for i := 0; i < 10; i++ {
-			notificationChan <- entity.Notification{
-				Type:    values.NotificationTypeStatus,
-				Content: uuid.NewString(),
-				Email:   emailRecipient,
-			}
-		}
-		close(notificationChan)
-
+	t.Run("should send to new recipient channel, rejecting when execeed channel capacity", func(t *testing.T) {
+		notificationRepo := &mocks.NotificationRepository{}
 		notificationChannelStarter := &mocks.NotificationChannelStarter{}
 
-		notificationChannelStarter.On("StartForRecipient", ctx, emailRecipient, newChannel).Return().Times(1)
+		emailRecipient := uuid.NewString() + "@mail.com"
+		notifications := []entity.Notification{
+			{
+				NotificationID: uuid.New(),
+				Type:           values.NotificationTypeStatus,
+				Content:        uuid.NewString(),
+				Email:          emailRecipient,
+			},
+			{
+				NotificationID: uuid.New(),
+				Type:           values.NotificationTypeStatus,
+				Content:        uuid.NewString(),
+				Email:          emailRecipient,
+			},
+			{
+				NotificationID: uuid.New(),
+				Type:           values.NotificationTypeStatus,
+				Content:        uuid.NewString(),
+				Email:          emailRecipient,
+			},
+			{
+				NotificationID: uuid.New(),
+				Type:           values.NotificationTypeStatus,
+				Content:        uuid.NewString(),
+				Email:          emailRecipient,
+			},
+		}
+		notificationChan := make(chan entity.Notification, 4)
 
-		processor := NewNotificationProcessor(notificationChan, notificationChannelStarter, createChannel)
-		time.Sleep(time.Second)
+		for _, notification := range notifications {
+			notificationChan <- notification
+		}
+		close(notificationChan)
+		recipientsChannels := entity.NewRecipientsChannel()
+		processor := NewNotificationProcessor(notificationRepo, notificationChan, notificationChannelStarter, createChannelForRecipient, recipientsChannels)
 
-		processor.Process(ctx)
+		for i := 1; i < 4; i++ {
+			notificationRejected := notifications[i]
+			notificationRejected.Status = "REJECTED"
+			notificationRepo.On("Save", ctx, notificationRejected).Return(nil, nil).Times(1)
+		}
+		notificationChannelStarter.On("StartForRecipient", ctx, emailRecipient, newChannelForRecipient).Return().Times(1)
 
-		mock.AssertExpectationsForObjects(t, notificationChannelStarter)
+		go processor.Process(ctx)
+		time.Sleep(time.Second * 1)
+
+		mock.AssertExpectationsForObjects(t, notificationChannelStarter, notificationRepo)
 	})
 }
 
 func TestGetNotificationChannelForRecipient(t *testing.T) {
+	ctx := context.TODO()
+	recipientsChannels := entity.NewRecipientsChannel()
+
 	t.Run("should get existing channel for recipient", func(t *testing.T) {
-		ctx := context.TODO()
 		notificationChannelStarter := &mocks.NotificationChannelStarter{}
 		emailRecipient := uuid.NewString()
 		existingChannel := make(chan entity.Notification)
-		recipientsChannel[emailRecipient] = existingChannel
+		recipientsChannels.Channels[emailRecipient] = existingChannel
 
 		expected := existingChannel
-		received := getNotificationChannelForRecipient(ctx, notificationChannelStarter, createChannel, emailRecipient)
+		received := getNotificationChannelForRecipient(ctx, notificationChannelStarter, createChannelForRecipient, recipientsChannels, emailRecipient)
 
 		assert.Equal(t, expected, received)
 	})
@@ -96,10 +154,10 @@ func TestGetNotificationChannelForRecipient(t *testing.T) {
 		notificationChannelStarter := &mocks.NotificationChannelStarter{}
 		emailRecipient := uuid.NewString()
 
-		notificationChannelStarter.On("StartForRecipient", ctx, emailRecipient, newChannel).Return()
+		notificationChannelStarter.On("StartForRecipient", ctx, emailRecipient, newChannelForRecipient).Return()
 
-		expected := newChannel
-		received := getNotificationChannelForRecipient(ctx, notificationChannelStarter, createChannel, emailRecipient)
+		expected := newChannelForRecipient
+		received := getNotificationChannelForRecipient(ctx, notificationChannelStarter, createChannelForRecipient, recipientsChannels, emailRecipient)
 		time.Sleep(time.Second)
 
 		assert.Equal(t, expected, received)

@@ -1,7 +1,6 @@
 package notificationservice
 
 import (
-	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -12,59 +11,47 @@ import (
 )
 
 func TestProcessNotifications(t *testing.T) {
-	ctx := context.TODO()
 
-	statusNotifications, newsNotifications, marketingNotifications := generateNotificationsSample()
+	t.Run("should delivery notifications to correct channels", func(t *testing.T) {
+		statusNotifications, newsNotifications, marketingNotifications, notificationsChan := generateNotificationsSample()
 
-	notificationChan := make(chan entity.Notification, 9)
-	for _, notification := range statusNotifications {
-		notificationChan <- notification
-	}
-	for _, notification := range newsNotifications {
-		notificationChan <- notification
-	}
-	for _, notification := range marketingNotifications {
-		notificationChan <- notification
-	}
-	close(notificationChan)
+		statusChan := make(chan entity.Notification)
+		newsChan := make(chan entity.Notification)
+		marketingChan := make(chan entity.Notification)
+		notificationChannelsMap, _ := entity.NewNotificationsChannelsMap(statusChan, newsChan, marketingChan)
 
-	statusChan := make(chan entity.Notification)
-	newsChan := make(chan entity.Notification)
-	marketingChan := make(chan entity.Notification)
-	notificationChannels, _ := entity.NewNotificationsChannels(statusChan, newsChan, marketingChan)
+		go processNotifications(notificationsChan, notificationChannelsMap)
 
-	service := NewNotificationService(notificationChan, notificationChannels)
-	go service.ProcessNotifications(ctx)
-
-	statusNotificationIndex := 0
-	for notification := range statusChan {
-		assert.Equal(t, notification, statusNotifications[statusNotificationIndex])
-		statusNotificationIndex++
-		if statusNotificationIndex == 3 {
-			break
+		statusNotificationIndex := 0
+		for notification := range statusChan {
+			assert.Equal(t, notification, statusNotifications[statusNotificationIndex])
+			statusNotificationIndex++
+			if statusNotificationIndex == 3 {
+				break
+			}
 		}
-	}
 
-	newsNotificationIndex := 0
-	for notification := range newsChan {
-		assert.Equal(t, notification, newsNotifications[newsNotificationIndex])
-		newsNotificationIndex++
-		if newsNotificationIndex == 3 {
-			break
+		newsNotificationIndex := 0
+		for notification := range newsChan {
+			assert.Equal(t, notification, newsNotifications[newsNotificationIndex])
+			newsNotificationIndex++
+			if newsNotificationIndex == 3 {
+				break
+			}
 		}
-	}
 
-	makertingNotificationIndex := 0
-	for notification := range marketingChan {
-		assert.Equal(t, notification, marketingNotifications[makertingNotificationIndex])
-		makertingNotificationIndex++
-		if makertingNotificationIndex == 3 {
-			break
+		makertingNotificationIndex := 0
+		for notification := range marketingChan {
+			assert.Equal(t, notification, marketingNotifications[makertingNotificationIndex])
+			makertingNotificationIndex++
+			if makertingNotificationIndex == 3 {
+				break
+			}
 		}
-	}
+	})
 }
 
-func generateNotificationsSample() ([]entity.Notification, []entity.Notification, []entity.Notification) {
+func generateNotificationsSample() ([]entity.Notification, []entity.Notification, []entity.Notification, chan entity.Notification) {
 	statusNotifications := []entity.Notification{
 		{
 			Type:    values.NotificationTypeStatus,
@@ -117,5 +104,17 @@ func generateNotificationsSample() ([]entity.Notification, []entity.Notification
 		},
 	}
 
-	return statusNotifications, newsNotifications, marketingNotifications
+	notificationsChan := make(chan entity.Notification, 9)
+	for _, notification := range statusNotifications {
+		notificationsChan <- notification
+	}
+	for _, notification := range newsNotifications {
+		notificationsChan <- notification
+	}
+	for _, notification := range marketingNotifications {
+		notificationsChan <- notification
+	}
+	close(notificationsChan)
+
+	return statusNotifications, newsNotifications, marketingNotifications, notificationsChan
 }

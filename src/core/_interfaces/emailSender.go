@@ -1,7 +1,10 @@
 package interfaces
 
-import "context"
+import (
+	"context"
+	"notification-service/src/core/domain/entity"
+)
 
 type EmailSender interface {
-	Send(ctx context.Context, content, email string)
+	Send(ctx context.Context, notification entity.Notification)
 }
