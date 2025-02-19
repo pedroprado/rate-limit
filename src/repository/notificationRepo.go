@@ -4,16 +4,23 @@ import (
 	"context"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"github.com/google/uuid"
 
 	interfaces "notification-service/src/core/_interfaces"
 	"notification-service/src/core/domain/entity"
 )
 
-type notificationRepository struct{}
+const (
+	collection = "notifications"
+)
 
-func NewNotificationRepository() interfaces.NotificationRepository {
-	return &notificationRepository{}
+type notificationRepository struct {
+	db *firestore.Client
+}
+
+func NewNotificationRepository(db *firestore.Client) interfaces.NotificationRepository {
+	return &notificationRepository{db: db}
 }
 
 func (n *notificationRepository) Save(ctx context.Context, notification entity.Notification) (*entity.Notification, error) {
@@ -26,5 +33,12 @@ func (n *notificationRepository) Save(ctx context.Context, notification entity.N
 		notification.UpdatedAt = timeNow
 	}
 
-	return &notification, nil
+	docRef := n.db.Collection(collection).Doc(notification.NotificationID.String())
+	record := NewNotificationRecordFromDomain(notification)
+	_, err := docRef.Set(ctx, record)
+	if err != nil {
+		return nil, err
+	}
+
+	return record.ToDomain(), nil
 }

@@ -1,0 +1,27 @@
+version: "3"
+services:
+  db:
+    image: firestore-integration
+    ports:
+      - "8080:8080"
+    environment:
+      FIRESTORE_PROJECT_ID: "local-project"
+      PORT: "8080"
+
+  
+  notification-service:
+    image: notifications
+    restart: always
+    build:
+      context: ../../
+    env_file:
+      - .env
+    depends_on:
+      - db
+    ports:
+      - "8182:8182"
+
+networks:
+  default:
+    external:
+      name: service_network

@@ -6,8 +6,10 @@ import (
 	"os"
 	"strconv"
 
+	"cloud.google.com/go/firestore"
 	"github.com/sirupsen/logrus"
 
+	interfaces "notification-service/src/core/_interfaces"
 	"notification-service/src/core/domain/entity"
 	"notification-service/src/core/domain/values"
 	emailsender "notification-service/src/core/useCases/emailSender"
@@ -31,19 +33,23 @@ var (
 	statusNotificationFrequencySeconds    = os.Getenv("STATUS_NOTIFICATION_FREQUENCY_SECONDS")
 	newsNotificationFrequencySeconds      = os.Getenv("NEWS_NOTIFICATION_FREQUENCY_SECONDS")
 	marketingNotificationFrequencySeconds = os.Getenv("MARKETING_NOTIFICATION_FREQUENCY_SECONDS")
+	firestoreProject                      = os.Getenv("FIRESTORE_PROJECT")
 
 	createChannelForRecipient = func() chan entity.Notification {
 		return make(chan entity.Notification, 1)
 	}
 
-	ctx              = context.Background()
-	notificationRepo = repository.NewNotificationRepository()
+	ctx context.Context
+	db  *firestore.Client
 )
 
 // @BasePath /notification-service
 func main() {
-	startNotificationProcessors()
+	ctx = context.Background()
+	db = getDB(ctx)
+	notificationRepo := repository.NewNotificationRepository(db)
 
+	startNotificationProcessors(notificationRepo)
 	notificationChannelsMap, err := entity.NewNotificationsChannelsMap(statusChan, newsChan, marketingChan)
 	if err != nil {
 		log.Fatal(err.Error())
@@ -60,7 +66,7 @@ func main() {
 	server.StartServer(ctx, serverPort)
 }
 
-func startNotificationProcessors() {
+func startNotificationProcessors(notificationRepo interfaces.NotificationRepository) {
 	statusNotificationFrequency, err := strconv.Atoi(statusNotificationFrequencySeconds)
 	if err != nil {
 		log.Fatal(err.Error())
@@ -74,7 +80,7 @@ func startNotificationProcessors() {
 		log.Fatal(err.Error())
 	}
 
-	emailSender := emailsender.NewEmailSender(infra.NewSmtpService(), notificationRepo)
+	emailSender := emailsender.NewEmailSender(infra.NewGoogleSmtpService(), notificationRepo)
 	statusProcessor := processor.NewNotificationProcessor(
 		notificationRepo,
 		statusChan,
@@ -106,4 +112,13 @@ func startNotificationProcessors() {
 	go func() {
 		marketingProcessor.Process(ctx)
 	}()
+}
+
+func getDB(ctx context.Context) *firestore.Client {
+	client, err := firestore.NewClient(ctx, firestoreProject)
+	if err != nil {
+		log.Fatal(ctx, "could not create firestore client", err)
+	}
+
+	return client
 }

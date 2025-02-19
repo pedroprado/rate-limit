@@ -8,13 +8,13 @@ import (
 	interfaces "notification-service/src/core/_interfaces"
 )
 
-type smtpService struct{}
+type googleSmtpService struct{}
 
-func NewSmtpService() interfaces.SmtpService {
-	return &smtpService{}
+func NewGoogleSmtpService() interfaces.SmtpService {
+	return &googleSmtpService{}
 }
 
-func (s *smtpService) SendEmail(ctx context.Context, content string, to string) error {
+func (s *googleSmtpService) SendEmail(ctx context.Context, content string, to string) error {
 	// TODO: replace with actual smtp service implementation for sending email
 	logrus.WithFields(
 		map[string]interface{}{

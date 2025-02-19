@@ -1,0 +1,14 @@
+version: "3"
+services:
+  db:
+    image: firestore_local
+    # ports:
+    #   - "8080:8080"
+    network_mode: host
+    environment:
+      FIRESTORE_PROJECT_ID: "local-project"
+
+
+networks:
+  default:
+    driver: bridge
