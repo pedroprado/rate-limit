@@ -3,14 +3,14 @@ Rate Limit Notification Service
 
 
 ## Overview
-- The applications receives requests for notifications and a rate limited notification sending for each **type** of notification and **email recipient**.
+- The application receives requests for notifiying clients and rate limits them by each **notification type** and **email recipient**.
 - This means that for any combination of **notification type** and **email recipient** the notifications will be sent by a **configured frequency** 
 - I solved this problem completly in code by using **channels** and **go routines**: 
    - there is a channel for each combination of **notification type** and **email recipient**
-   - there as a **go routine** for each of these channels that receives the notifications and send email by the configured frequency (keeping in mind that the frequency the inverse of the rate: for a configured frequency of, lets say, 10 seconds, the rate is 0.1/s. I just thought would easier to configure the frequency over the rate)
+   - there as a **go routine** for each of these channels that receives the notifications and send email for the recipients, by the configured frequency (keeping in mind that the frequency the inverse of the rate: for a configured frequency of, lets say, 10 seconds, the rate is 0.1/s. I just thought would easier to configure the frequency instead of rate)
 - Observations: 
-    - this solution solves the problem if the load **if not to high** and we can cope with only one instance of the application
-    - for a more scalable solution, we should use message system, for allowing persistency and concurrency control among the instances
+    - this solution solves the problem if the load **if not too high** and we can cope with only one instance of the application
+    - for a more scalable solution, we should use message system, for allowing persistency and concurrency control among various instances
     - i tried to solve the problem of "faning out" the rate limit notifications, so the notification model it self may need a lot more information
     - i did not had time for actualy implement the "email sending" function, but i left an interface to be implemented using any smtp service of choice
 
