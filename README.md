@@ -11,6 +11,7 @@ Rate Limit Notification Service
 - Observations: 
     - this solution solves the problem if the load **if not to high** and we can cope with only one instance of the application
     - for a more scalable solution, we should use message system, for allowing persistency and concurrency control among the instances
+    - i tried to solve the problem of "faning out" the rate limit notifications, so the notification model it self may need a lot more information
 
 
 ## Running the Application
@@ -50,7 +51,12 @@ POST http://localhost:8182/notification-service/notifications
   b- After the configured FREQUENCY, for that type of notification (check the env file), the notification will be "sent". This means it status will be changed to "SENT" and the email for the recipent will be sent
   c- If a another notification of **same type** for the **same email** recipient is posted **before the last notification is sent**, this will be rejected (set to status "REJECTED")
 
+- Posting various notificaitons of same type and email recipient
+  a- Post repeatadaly a notification of **same type** and **email recipient**
+  b- After this, one should notice that there will be a few "SENT" notifications, and a lot of "REJECTED"
+  c- The few "SENT" notifications should have the updated_at differing by approximately the configured frequency
+
 - Checking the notification status
   a.Access the firetore emulator in  *http://localhost:4000* and click the
   b.After the first notification is posted, a collection of "notifications" will apear
-  c.You can check for the status changing directly in the database
+  c.For checking the notifications, use the filter "status = SENT" in the collection
