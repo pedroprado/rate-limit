@@ -12,6 +12,7 @@ Rate Limit Notification Service
     - this solution solves the problem if the load **if not to high** and we can cope with only one instance of the application
     - for a more scalable solution, we should use message system, for allowing persistency and concurrency control among the instances
     - i tried to solve the problem of "faning out" the rate limit notifications, so the notification model it self may need a lot more information
+    - i did not had time for actualy implement the "email sending" function, but i left an interface to be implemented using any smtp service of choice
 
 
 ## Running the Application
