@@ -14,8 +14,8 @@ type NotificationChannelStarter struct {
 	mock.Mock
 }
 
-// StartForRecipient provides a mock function with given fields: ctx, emailRecipient, notificationForRecipientChan
-func (_m *NotificationChannelStarter) StartForRecipient(ctx context.Context, emailRecipient string, notificationForRecipientChan chan entity.Notification) {
+// StartNotifyingRecipient provides a mock function with given fields: ctx, emailRecipient, notificationForRecipientChan
+func (_m *NotificationChannelStarter) StartNotifyingRecipient(ctx context.Context, emailRecipient string, notificationForRecipientChan chan entity.Notification) {
 	_m.Called(ctx, emailRecipient, notificationForRecipientChan)
 }
 

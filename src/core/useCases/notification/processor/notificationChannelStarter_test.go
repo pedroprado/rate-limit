@@ -45,7 +45,7 @@ func TestSendForRecipient(t *testing.T) {
 	emailSender.On("Send", ctx, notifications[1]).Return()
 	emailSender.On("Send", ctx, notifications[2]).Return()
 
-	starter.StartForRecipient(ctx, "email", notificationChannelForRecipient)
+	starter.StartNotifyingRecipient(ctx, "email", notificationChannelForRecipient)
 
 	mock.AssertExpectationsForObjects(t, emailSender)
 }

@@ -68,7 +68,7 @@ func getNotificationChannelForRecipient(
 	newNotificationChannelForRecipient := createChannelForRecipient()
 	recipientsChannels.Channels[emailRecipient] = newNotificationChannelForRecipient
 
-	go notificationChannelStarter.StartForRecipient(ctx, emailRecipient, newNotificationChannelForRecipient)
+	go notificationChannelStarter.StartNotifyingRecipient(ctx, emailRecipient, newNotificationChannelForRecipient)
 
 	return newNotificationChannelForRecipient
 }

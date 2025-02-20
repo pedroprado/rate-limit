@@ -28,7 +28,7 @@ func NewNotificationChannelStarter(
 	}
 }
 
-func (n *notificationSender) StartForRecipient(
+func (n *notificationSender) StartNotifyingRecipient(
 	ctx context.Context,
 	emailRecipient string,
 	notificationChannelForRecipient chan entity.Notification,

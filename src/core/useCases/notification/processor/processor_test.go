@@ -75,7 +75,7 @@ func TestProcess(t *testing.T) {
 		go processor.Process(ctx)
 		time.Sleep(time.Second * 1)
 
-		notificationChannelStarter.AssertNumberOfCalls(t, "StartForRecipient", 0)
+		notificationChannelStarter.AssertNumberOfCalls(t, "StartNotifyingRecipient", 0)
 		mock.AssertExpectationsForObjects(t, notificationRepo)
 	})
 
@@ -124,7 +124,7 @@ func TestProcess(t *testing.T) {
 			notificationRejected.Status = "REJECTED"
 			notificationRepo.On("Save", ctx, notificationRejected).Return(nil, nil).Times(1)
 		}
-		notificationChannelStarter.On("StartForRecipient", ctx, emailRecipient, newChannelForRecipient).Return().Times(1)
+		notificationChannelStarter.On("StartNotifyingRecipient", ctx, emailRecipient, newChannelForRecipient).Return().Times(1)
 
 		go processor.Process(ctx)
 		time.Sleep(time.Second * 1)
@@ -154,7 +154,7 @@ func TestGetNotificationChannelForRecipient(t *testing.T) {
 		notificationChannelStarter := &mocks.NotificationChannelStarter{}
 		emailRecipient := uuid.NewString()
 
-		notificationChannelStarter.On("StartForRecipient", ctx, emailRecipient, newChannelForRecipient).Return()
+		notificationChannelStarter.On("StartNotifyingRecipient", ctx, emailRecipient, newChannelForRecipient).Return()
 
 		expected := newChannelForRecipient
 		received := getNotificationChannelForRecipient(ctx, notificationChannelStarter, createChannelForRecipient, recipientsChannels, emailRecipient)

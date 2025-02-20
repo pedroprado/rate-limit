@@ -7,7 +7,7 @@ import (
 )
 
 type NotificationChannelStarter interface {
-	StartForRecipient(
+	StartNotifyingRecipient(
 		ctx context.Context,
 		emailRecipient string,
 		notificationForRecipientChan chan entity.Notification,

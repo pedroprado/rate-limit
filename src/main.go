@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"cloud.google.com/go/firestore"
+	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 
 	interfaces "notification-service/src/core/_interfaces"
@@ -30,10 +31,10 @@ var (
 	newsChan          = make(chan entity.Notification)
 	marketingChan     = make(chan entity.Notification)
 
-	statusNotificationFrequencySeconds    = os.Getenv("STATUS_NOTIFICATION_FREQUENCY_SECONDS")
-	newsNotificationFrequencySeconds      = os.Getenv("NEWS_NOTIFICATION_FREQUENCY_SECONDS")
-	marketingNotificationFrequencySeconds = os.Getenv("MARKETING_NOTIFICATION_FREQUENCY_SECONDS")
-	firestoreProject                      = os.Getenv("FIRESTORE_PROJECT")
+	statusNotificationFrequencySeconds    string
+	newsNotificationFrequencySeconds      string
+	marketingNotificationFrequencySeconds string
+	firestoreProject                      string
 
 	createChannelForRecipient = func() chan entity.Notification {
 		return make(chan entity.Notification, 1)
@@ -45,6 +46,8 @@ var (
 
 // @BasePath /notification-service
 func main() {
+	loadEnvs()
+
 	ctx = context.Background()
 	db = getDB(ctx)
 	notificationRepo := repository.NewNotificationRepository(db)
@@ -112,6 +115,17 @@ func startNotificationProcessors(notificationRepo interfaces.NotificationReposit
 	go func() {
 		marketingProcessor.Process(ctx)
 	}()
+}
+
+func loadEnvs() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	statusNotificationFrequencySeconds = os.Getenv("STATUS_NOTIFICATION_FREQUENCY_SECONDS")
+	newsNotificationFrequencySeconds = os.Getenv("NEWS_NOTIFICATION_FREQUENCY_SECONDS")
+	marketingNotificationFrequencySeconds = os.Getenv("MARKETING_NOTIFICATION_FREQUENCY_SECONDS")
+	firestoreProject = os.Getenv("FIRESTORE_PROJECT")
 }
 
 func getDB(ctx context.Context) *firestore.Client {
