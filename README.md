@@ -14,6 +14,13 @@ Rate Limit Notification Service
     - i tried to solve the problem of "faning out" the rate limit notifications, so the notification model it self may need a lot more information
     - i did not had time for actualy implement the "email sending" function, but i left an interface to be implemented using any smtp service of choice
 
+- Application Code Architecture: Clean Code
+  - /src                           (source code)
+  -     /core                      (domain and use case layers)
+  -     /infra                     (infra struture layer)
+  -     /presentation              (apis)
+  -     /repository                (persistency layer)
+
 
 ## Running the Application
 
